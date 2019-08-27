@@ -90,12 +90,7 @@ public class GetDepATsTask extends DefaultTask {
      * @return Пути к jar-никам зависимостей
      */
     private Set<String> collectDependencies() {
-        Set<String> dependencies = new HashSet<>();
-
-//        logger.lifecycle("Всего проектов: " + getProject().getAllprojects().size());
-//        for (Project project : getProject().getAllprojects()) {
-//            logger.lifecycle(project.getName());
-//        }
+        Set<String> dependenciesPaths = new HashSet<>();
 
         for (Project project : getProject().getAllprojects()) {
             logger.lifecycle("Project: " + project.getName());
@@ -103,20 +98,20 @@ public class GetDepATsTask extends DefaultTask {
                 logger.lifecycle("Configuration: " + configuration + ", resolved: " + configuration.isCanBeResolved());
                 if (configuration.isCanBeResolved()) {
                     try {
-                        Set<File> files = configuration.getResolvedConfiguration().getLenientConfiguration().getFiles(Specs.satisfyAll());
+                        // Этим хистрым хаком мы получаем все зависимости, которые смогли разрешить.
+                        // configuration.getFiles() обосрется есть хоть у одной зависимости будет
+                        // неправильный путь из-за чего ее нельзя будет разрешить.
+                        // А так как пользоваться этим плагином может конченный дибил,
+                        // который не сможет нормально сконфигурить мультипроджекты,
+                        // то нам следует игнорировать неразрешенные зависимости
+                        Set<File> files = configuration.getResolvedConfiguration()
+                                .getLenientConfiguration().getFiles(Specs.satisfyAll());
 
                         logger.lifecycle("Found " + files.size() + " files");
                         for (File file : files) {
                             logger.lifecycle("Pickup file: " + file.toString());
-                            if ("jar".equals(getFileExtension(file))) dependencies.add(file.toString());
+                            if ("jar".equals(getFileExtension(file))) dependenciesPaths.add(file.toString());
                         }
-
-//                        Set<File> files = configuration.getFiles();
-//                        logger.lifecycle("Found " + files.size() + " files");
-//                        for (File file : files) {
-//                            logger.lifecycle("Pickup file: " + file.toString());
-//                            if ("jar".equals(getFileExtension(file))) dependencies.add(file.toString());
-//                        }
                     } catch (Exception e) {
                         if (enableStacktrace) logger.lifecycle("pizda", e);
                     }
@@ -124,8 +119,7 @@ public class GetDepATsTask extends DefaultTask {
             }
         }
 
-
-        return dependencies;
+        return dependenciesPaths;
     }
 
     /**
