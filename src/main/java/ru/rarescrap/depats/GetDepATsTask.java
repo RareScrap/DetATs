@@ -22,8 +22,6 @@ public class GetDepATsTask extends DefaultTask {
     //@OutputFile // TODO: Поменить файл как выходной артефакт
     //private File outputFile = new File(dependenciesAT);
 
-    private File depATs;
-
     public GetDepATsTask() {
         setDescription("Search for access transformers in dependencies and save it to file");
     }
@@ -33,7 +31,7 @@ public class GetDepATsTask extends DefaultTask {
      */
     @TaskAction
     public String getDepATs() { // TODO: Почему я не могу запустить этот таск только для рутпроджекта?
-        depATs = getProject().getExtensions().getByType(DepATsPluginExtension.class).getDepATs(); // Не в конструкторе, т.к. не подберет кастомные значения т.к. запустится до evaluation
+        File depATs = getProject().getExtensions().getByType(DepATsPluginExtension.class).getDepATs(); // Не в конструкторе, т.к. не подберет кастомные значения т.к. запустится до evaluation
 
         Set<String> ats;
         // Т.к. этот таск может выполнится и для сапроджектов, то мы предварительно выгрузим уже
@@ -66,7 +64,7 @@ public class GetDepATsTask extends DefaultTask {
 
         if (ats.isEmpty()) throw new RuntimeException("Dependencies not found. Are you called setupDecompWorkspace?");
         logger.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
-        saveATs(ats);
+        saveATs(ats, depATs);
         return depATs.getAbsolutePath();
     }
 
@@ -140,7 +138,7 @@ public class GetDepATsTask extends DefaultTask {
         return cfgs;
     }
 
-    private void saveATs(Set<String> ats) {
+    private void saveATs(Set<String> ats, File depATs) {
         FileWriter fw = null;
         try {
             fw = new FileWriter(depATs);
