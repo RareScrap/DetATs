@@ -9,6 +9,7 @@ public class DepATsPluginExtension {
     private File depATs;
 
     public DepATsPluginExtension(Project project) {
+        // Дефолтные значения
         depATs = new File(project.getBuildDir().getAbsolutePath() + File.separator + "dependencies_at.cfg");
     }
 

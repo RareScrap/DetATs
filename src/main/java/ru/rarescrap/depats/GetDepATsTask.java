@@ -138,6 +138,11 @@ public class GetDepATsTask extends DefaultTask {
         return cfgs;
     }
 
+    /**
+     * Сохраняет трансформеры в указанный файл
+     * @param ats Трансформеры
+     * @param depATs Файл для сохранения
+     */
     private void saveATs(Set<String> ats, File depATs) {
         FileWriter fw = null;
         try {
