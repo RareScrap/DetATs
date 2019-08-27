@@ -3,13 +3,10 @@ package ru.rarescrap.depats;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.DependencySet;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.configuration.ShowStacktrace;
 import org.gradle.api.specs.Specs;
-import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
@@ -17,7 +14,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class GetDepATsTask extends DefaultTask {
-    private String dependenciesAT = getProject().getRootProject().getBuildDir() + "\\dependencies_at.cfg";
     // ALWAYS - при явном указании --stacktrace, INTERNAL_EXCEPTIONS - при отсуствии
     private boolean enableStacktrace = getProject().getGradle().getStartParameter().getShowStacktrace() == ShowStacktrace.ALWAYS;
 
@@ -25,6 +21,8 @@ public class GetDepATsTask extends DefaultTask {
 
     //@OutputFile // TODO: Поменить файл как выходной артефакт
     //private File outputFile = new File(dependenciesAT);
+
+    private File depATs;
 
     public GetDepATsTask() {
         setDescription("Search for access transformers in dependencies and save it to file");
@@ -35,12 +33,13 @@ public class GetDepATsTask extends DefaultTask {
      */
     @TaskAction
     public String getDepATs() { // TODO: Почему я не могу запустить этот таск только для рутпроджекта?
+        depATs = getProject().getExtensions().getByType(DepATsPluginExtension.class).getDepATs(); // Не в конструкторе, т.к. не подберет кастомные значения т.к. запустится до evaluation
 
         Set<String> ats;
         // Т.к. этот таск может выполнится и для сапроджектов, то мы предварительно выгрузим уже
         // сохраненные трансформеры, чтобы они не перезапиались
         try {
-            ats = extractATs(dependenciesAT);
+            ats = extractATs(depATs.getAbsolutePath());
         } catch (IOException e) {
             ats = new HashSet<>();
         }
@@ -66,9 +65,9 @@ public class GetDepATsTask extends DefaultTask {
         }
 
         if (ats.isEmpty()) throw new RuntimeException("Dependencies not found. Are you called setupDecompWorkspace?");
-        logger.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + dependenciesAT);
+        logger.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
         saveATs(ats);
-        return dependenciesAT;
+        return depATs.getAbsolutePath();
     }
 
     /**
@@ -150,7 +149,7 @@ public class GetDepATsTask extends DefaultTask {
     private void saveATs(Set<String> ats) {
         FileWriter fw = null;
         try {
-            fw = new FileWriter(dependenciesAT);
+            fw = new FileWriter(depATs);
             for (String at : ats) {
                 fw.write(at+"\n");
             }
