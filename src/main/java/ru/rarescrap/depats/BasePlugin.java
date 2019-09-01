@@ -6,7 +6,7 @@ import org.gradle.api.logging.Logger;
 
 public class BasePlugin implements Plugin<Project> {
 
-    static Logger logger;
+    static Logger LOGGER;
 
     @Override
     public void apply(Project project) {
@@ -20,6 +20,6 @@ public class BasePlugin implements Plugin<Project> {
 //            System.out.println(e1.getDepATs());
 //        });
 
-        logger = project.getLogger();
+        LOGGER = project.getLogger();
     }
 }

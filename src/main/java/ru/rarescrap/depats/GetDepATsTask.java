@@ -12,7 +12,7 @@ import java.io.*;
 import java.util.HashSet;
 import java.util.Set;
 
-import static ru.rarescrap.depats.BasePlugin.logger;
+import static ru.rarescrap.depats.BasePlugin.LOGGER;
 
 public class GetDepATsTask extends DefaultTask {
     // ALWAYS - при явном указании --stacktrace, INTERNAL_EXCEPTIONS - при отсуствии
@@ -44,13 +44,13 @@ public class GetDepATsTask extends DefaultTask {
 //        }
 
         for (File dependency : collectDependencies()) {
-            logger.lifecycle("Scanning dependency: " + dependency);
+            LOGGER.lifecycle("Scanning dependency: " + dependency);
             Set<File> cfgPaths = getCFGs(dependency);
             if (cfgPaths.isEmpty()) continue; // Если у зависимоти нет cfg-файла - пропускаем ее
-            logger.lifecycle("Found cfg files in dependency: " + dependency);
+            LOGGER.lifecycle("Found cfg files in dependency: " + dependency);
             for (File cfg : cfgPaths) {
                 try {
-                    logger.lifecycle("Extracting ATs from: " + cfg);
+                    LOGGER.lifecycle("Extracting ATs from: " + cfg);
                     ats.add(cfg, dependency);
                 } catch (IOException e) {
                     if (enableStacktrace) e.printStackTrace();
@@ -59,7 +59,7 @@ public class GetDepATsTask extends DefaultTask {
         }
 
         if (ats.isEmpty()) throw new RuntimeException("Dependencies not found. Are you called setupDecompWorkspace?");
-        logger.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
+        LOGGER.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
 
         ats.saveInto(depATs);
         return depATs.getAbsolutePath();
@@ -72,9 +72,9 @@ public class GetDepATsTask extends DefaultTask {
         Set<File> dependencies = new HashSet<>();
 
         for (Project project : getProject().getAllprojects()) {
-            logger.lifecycle("Project: " + project.getName());
+            LOGGER.lifecycle("Project: " + project.getName());
             for (Configuration configuration : project.getConfigurations()) {
-                logger.lifecycle("Configuration: " + configuration + ", resolved: " + configuration.isCanBeResolved());
+                LOGGER.lifecycle("Configuration: " + configuration + ", resolved: " + configuration.isCanBeResolved());
                 if (configuration.isCanBeResolved()) {
                     try {
                         // Этим хистрым хаком мы получаем все зависимости, которые смогли разрешить.
@@ -86,13 +86,13 @@ public class GetDepATsTask extends DefaultTask {
                         Set<File> files = configuration.getResolvedConfiguration()
                                 .getLenientConfiguration().getFiles(Specs.satisfyAll());
 
-                        logger.lifecycle("Found " + files.size() + " files");
+                        LOGGER.lifecycle("Found " + files.size() + " files");
                         for (File file : files) {
-                            logger.lifecycle("Pickup file: " + file.toString());
+                            LOGGER.lifecycle("Pickup file: " + file.toString());
                             if ("jar".equals(getFileExtension(file))) dependencies.add(file);
                         }
                     } catch (Exception e) {
-                        if (enableStacktrace) logger.lifecycle("pizda", e);
+                        if (enableStacktrace) LOGGER.lifecycle("pizda", e);
                     }
                 }
             }

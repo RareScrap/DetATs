@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static ru.rarescrap.depats.BasePlugin.logger;
+import static ru.rarescrap.depats.BasePlugin.LOGGER;
 
 public class ATsRepository {
     private Set<DepAT> depATs = new HashSet<>();
@@ -17,12 +17,12 @@ public class ATsRepository {
     public void add(File cfgFile, File dependency) throws IOException {
         Set<String> allATs = parseCfg(cfgFile); // Все трансформеры из файла
         if (allATs.isEmpty()) {
-            logger.lifecycle("No ATs in " + cfgFile);
+            LOGGER.lifecycle("No ATs in " + cfgFile);
             return;
         }
 
-        logger.lifecycle("Founded ATs: " + cfgFile);
-        for (String atPath : allATs) logger.lifecycle("\t" + atPath);
+        LOGGER.lifecycle("Founded ATs: " + cfgFile);
+        for (String atPath : allATs) LOGGER.lifecycle("\t" + atPath);
 
         // Потому что не хочу тащить гуаву
         Set<String> actualATs = new HashSet<>(allATs); // Уникальные транформеры относительно других
