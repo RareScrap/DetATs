@@ -10,6 +10,7 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static ru.rarescrap.depats.BasePlugin.LOGGER;
@@ -110,12 +111,38 @@ public class GetDepATsTask extends DefaultTask {
         try {
             FileTree zipTree = getProject().zipTree(dependency);
             for (File file : zipTree.getFiles()) {
-                if ("cfg".equals(getFileExtension(file))) cfgs.add(file);
+                if ("cfg".equals(getFileExtension(file)) && !shouldIgnoreCFG(file, dependency))
+                    cfgs.add(file);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return cfgs;
+    }
+
+    /**
+     * Определяет, стоит ли игнорировать трансформер
+     * @param cfgFile cfg-файл, содержащий трансформеры
+     * @param dependency jar'ник, в котором хранитс cfg-файл
+     * @return True.
+     */
+    private boolean shouldIgnoreCFG(File cfgFile, File dependency) {
+        List<String> ignoredATs = DepATsPluginExtension.get(getProject()).ignoredATs;
+        for (String ignoredAT : ignoredATs) {
+            String[] parts = ignoredAT.split(":");
+
+            String ignoredCfgName = parts[0];
+            String ignoredDepName = "";
+            if (parts.length > 1) ignoredDepName = parts[1];
+
+            if (ignoredCfgName.equals(cfgFile.getName())) {
+                if (ignoredDepName.isEmpty()) return true;
+
+                return ignoredDepName.equals(dependency.getName());
+            }
+        }
+
+        return false;
     }
 
     // Вообще похуй на Files, апач комон и гуаву. С этими вашими апдейтами проще парсить расширение самому.
