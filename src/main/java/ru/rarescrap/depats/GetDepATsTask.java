@@ -4,7 +4,6 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileTree;
-import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.configuration.ShowStacktrace;
 import org.gradle.api.specs.Specs;
 import org.gradle.api.tasks.TaskAction;
@@ -13,11 +12,11 @@ import java.io.*;
 import java.util.HashSet;
 import java.util.Set;
 
+import static ru.rarescrap.depats.BasePlugin.logger;
+
 public class GetDepATsTask extends DefaultTask {
     // ALWAYS - при явном указании --stacktrace, INTERNAL_EXCEPTIONS - при отсуствии
     private boolean enableStacktrace = getProject().getGradle().getStartParameter().getShowStacktrace() == ShowStacktrace.ALWAYS;
-
-    private Logger logger = getProject().getLogger();
 
     //@OutputFile // TODO: Поменить файл как выходной артефакт
     //private File outputFile = new File(dependenciesAT);
@@ -33,29 +32,26 @@ public class GetDepATsTask extends DefaultTask {
     public String getDepATs() { // TODO: Почему я не могу запустить этот таск только для рутпроджекта?
         File depATs = getProject().getExtensions().getByType(DepATsPluginExtension.class).getDepATs(); // Не в конструкторе, т.к. не подберет кастомные значения т.к. запустится до evaluation
 
-        Set<String> ats;
+        ATsRepository ats = new ATsRepository();
+
+        // TODO: Переработать парсер
         // Т.к. этот таск может выполнится и для сапроджектов, то мы предварительно выгрузим уже
         // сохраненные трансформеры, чтобы они не перезапиались
-        try {
-            ats = extractATs(depATs.getAbsolutePath());
-        } catch (IOException e) {
-            ats = new HashSet<>();
-        }
+//        try {
+//            ats = extractATs(depATs.getAbsolutePath());
+//        } catch (IOException e) {
+//            ats = new HashSet<>();
+//        }
 
-        for (String dependencyPath : collectDependencies()) {
-            logger.lifecycle("Scanning dependency: " + dependencyPath);
-            Set<String> cfgPaths = getCFGs(dependencyPath);
+        for (File dependency : collectDependencies()) {
+            logger.lifecycle("Scanning dependency: " + dependency);
+            Set<File> cfgPaths = getCFGs(dependency);
             if (cfgPaths.isEmpty()) continue; // Если у зависимоти нет cfg-файла - пропускаем ее
-            logger.lifecycle("Found cfg files in dependency: " + dependencyPath);
-            for (String cfg : cfgPaths) {
+            logger.lifecycle("Found cfg files in dependency: " + dependency);
+            for (File cfg : cfgPaths) {
                 try {
                     logger.lifecycle("Extracting ATs from: " + cfg);
-                    Set<String> dependencyATs = extractATs(cfg);
-                    if (dependencyATs.isEmpty()) logger.lifecycle("No ATs in " + cfg);
-                    else {
-                        logger.lifecycle("Founded ATs: " + dependencyATs);
-                        ats.addAll(dependencyATs);
-                    }
+                    ats.add(cfg, dependency);
                 } catch (IOException e) {
                     if (enableStacktrace) e.printStackTrace();
                 }
@@ -64,31 +60,16 @@ public class GetDepATsTask extends DefaultTask {
 
         if (ats.isEmpty()) throw new RuntimeException("Dependencies not found. Are you called setupDecompWorkspace?");
         logger.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
-        saveATs(ats, depATs);
-        return depATs.getAbsolutePath();
-    }
 
-    /**
-     * @param cfgPath Путь до cfg-файла
-     * @return Построчно извлеченные трансформеры
-     * @throws IOException
-     */
-    private Set<String> extractATs(String cfgPath) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(cfgPath));
-        String line = reader.readLine();
-        Set<String> ats = new HashSet<>();
-        while (line != null) {
-            if (line.startsWith("public")) ats.add(line);
-            line = reader.readLine();
-        }
-        return ats;
+        ats.saveInto(depATs);
+        return depATs.getAbsolutePath();
     }
 
     /**
      * @return Пути к jar-никам зависимостей
      */
-    private Set<String> collectDependencies() {
-        Set<String> dependenciesPaths = new HashSet<>();
+    private Set<File> collectDependencies() {
+        Set<File> dependencies = new HashSet<>();
 
         for (Project project : getProject().getAllprojects()) {
             logger.lifecycle("Project: " + project.getName());
@@ -108,7 +89,7 @@ public class GetDepATsTask extends DefaultTask {
                         logger.lifecycle("Found " + files.size() + " files");
                         for (File file : files) {
                             logger.lifecycle("Pickup file: " + file.toString());
-                            if ("jar".equals(getFileExtension(file))) dependenciesPaths.add(file.toString());
+                            if ("jar".equals(getFileExtension(file))) dependencies.add(file);
                         }
                     } catch (Exception e) {
                         if (enableStacktrace) logger.lifecycle("pizda", e);
@@ -117,48 +98,24 @@ public class GetDepATsTask extends DefaultTask {
             }
         }
 
-        return dependenciesPaths;
+        return dependencies;
     }
 
     /**
-     * @param dependencyPath Путь до jar-ника зависимости
-     * @return Пути до cfg-файлов для указанной зависимости
+     * @param dependency Путь до jar-ника зависимости
+     * @return cfg-файлов для указанной зависимости
      */
-    private Set<String> getCFGs(String dependencyPath) {
-        Set<String> cfgs = new HashSet<>();
+    private Set<File> getCFGs(File dependency) {
+        Set<File> cfgs = new HashSet<>();
         try {
-
-            FileTree zipTree = getProject().zipTree(dependencyPath);
+            FileTree zipTree = getProject().zipTree(dependency);
             for (File file : zipTree.getFiles()) {
-                if ("cfg".equals(getFileExtension(file))) cfgs.add(file.getAbsolutePath());
+                if ("cfg".equals(getFileExtension(file))) cfgs.add(file);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return cfgs;
-    }
-
-    /**
-     * Сохраняет трансформеры в указанный файл
-     * @param ats Трансформеры
-     * @param depATs Файл для сохранения
-     */
-    private void saveATs(Set<String> ats, File depATs) {
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(depATs);
-            for (String at : ats) {
-                fw.write(at+"\n");
-            }
-        } catch (IOException e) {
-            if (enableStacktrace) e.printStackTrace();
-        } finally {
-            try {
-                if (fw != null) fw.close();
-            } catch (IOException e) {
-                if (enableStacktrace) e.printStackTrace();
-            }
-        }
     }
 
     // Вообще похуй на Files, апач комон и гуаву. С этими вашими апдейтами проще парсить расширение самому.
