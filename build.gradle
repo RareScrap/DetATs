@@ -1,19 +1,8 @@
-buildscript {
-    repositories {
-        mavenLocal()
-        dependencies {
-            classpath 'ru.rarescrap:depATs:0.0.1' // Для поиска трансформеров в зависимостях
-
-        }
-    }
-}
 plugins {
     id 'java'
     id 'groovy'
     id 'maven'
 }
-
-apply plugin: 'ru.rarescrap.depATs' // TODO: Вырезать отсюда
 
 group 'ru.rarescrap'
 version '0.0.1'
@@ -22,12 +11,11 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    mavenLocal()
 }
 
 dependencies {
     compile gradleApi()
     testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile 'org.apache.commons:commons-lang3:3.9'
+    compile 'org.apache.commons:commons-lang3:3.9' // В основном для генерации equals()'ов
     testCompile 'nl.jqno.equalsverifier:equalsverifier:1.+' // Для удобного тестирования equals() и hashCode()
 }
