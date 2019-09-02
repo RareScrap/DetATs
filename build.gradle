@@ -21,4 +21,4 @@ dependencies {
 }
 
 // Устраняет ошибки компиляции из-за русских комментов
-compileJava.options.encoding = 'UTF-8'
+tasks.withType(JavaCompile) { options.encoding = 'UTF-8' }
