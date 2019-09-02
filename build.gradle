@@ -19,3 +19,6 @@ dependencies {
     compile 'org.apache.commons:commons-lang3:3.9' // В основном для генерации equals()'ов
     testCompile 'nl.jqno.equalsverifier:equalsverifier:1.+' // Для удобного тестирования equals() и hashCode()
 }
+
+// Устраняет ошибки компиляции из-за русских комментов
+compileJava.options.encoding = 'UTF-8'
