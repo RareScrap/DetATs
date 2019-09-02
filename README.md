@@ -1,4 +1,5 @@
-![logo](github_media/logo.png)
+<img src="github_media/logo.png" alt="logo" width="300"/>
+
 # DepATs - Dependency Access Transformers
 Плагин для minecraft-моддеров, позволяющий искать Access-трансформеры в зависимостях машего проекта, а затем объединяет их в один файл.
 
