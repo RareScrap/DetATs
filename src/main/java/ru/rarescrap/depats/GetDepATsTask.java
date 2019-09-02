@@ -30,7 +30,7 @@ public class GetDepATsTask extends DefaultTask {
      * @return Путь до файла с итоговыми трансформерами
      */
     @TaskAction
-    public String getDepATs() { // TODO: Почему я не могу запустить этот таск только для рутпроджекта?
+    public void getDepATs() { // TODO: Почему я не могу запустить этот таск только для рутпроджекта?
         File depATs = getProject().getExtensions().getByType(DepATsPluginExtension.class).getDepATs(); // Не в конструкторе, т.к. не подберет кастомные значения т.к. запустится до evaluation
 
         ATsRepository ats = new ATsRepository();
@@ -45,25 +45,27 @@ public class GetDepATsTask extends DefaultTask {
 //        }
 
         for (File dependency : collectDependencies()) {
-            LOGGER.lifecycle("Scanning dependency: " + dependency);
+            LOGGER.info("Scanning dependency: " + dependency);
             Set<File> cfgPaths = getCFGs(dependency);
             if (cfgPaths.isEmpty()) continue; // Если у зависимоти нет cfg-файла - пропускаем ее
-            LOGGER.lifecycle("Found cfg files in dependency: " + dependency);
+            LOGGER.info("Found cfg files in dependency: " + dependency);
             for (File cfg : cfgPaths) {
                 try {
-                    LOGGER.lifecycle("Extracting ATs from: " + cfg);
+                    LOGGER.info("Extracting ATs from: " + cfg);
                     ats.add(cfg, dependency);
                 } catch (IOException e) {
-                    if (enableStacktrace) e.printStackTrace();
+                    LOGGER.error(e.getMessage());
                 }
             }
         }
 
-        if (ats.isEmpty()) throw new RuntimeException("Dependencies not found. Are you called setupDecompWorkspace?");
-        LOGGER.lifecycle("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
+        if (ats.isEmpty()) {
+           LOGGER.error("You either haven't any ATs in your dependencies, ignore all exist ATs, or do not have any dependencies because you not called 'setupDecompWorkspace'."); // TODO: Вот с setupDecompWorkspace не знаю. Походу он всегда будет иметь хоть какие-то зависимости.
+           return;
+        }
 
+        LOGGER.info("Saving all founded ATs (" + ats.size() + ") in " + depATs.getAbsolutePath());
         ats.saveInto(depATs);
-        return depATs.getAbsolutePath();
     }
 
     /**
@@ -73,11 +75,11 @@ public class GetDepATsTask extends DefaultTask {
         Set<File> dependencies = new HashSet<>();
 
         for (Project project : getProject().getAllprojects()) {
-            LOGGER.lifecycle("Project: " + project.getName());
+            LOGGER.info("Project: " + project.getName());
             for (Configuration configuration : project.getConfigurations()) {
-                LOGGER.lifecycle("Configuration: " + configuration + ", resolved: " + configuration.isCanBeResolved());
                 if (configuration.isCanBeResolved()) {
                     try {
+                        LOGGER.info("Analyse configuration: " + configuration.getName());
                         // Этим хистрым хаком мы получаем все зависимости, которые смогли разрешить.
                         // configuration.getFiles() обосрется есть хоть у одной зависимости будет
                         // неправильный путь из-за чего ее нельзя будет разрешить.
@@ -87,15 +89,16 @@ public class GetDepATsTask extends DefaultTask {
                         Set<File> files = configuration.getResolvedConfiguration()
                                 .getLenientConfiguration().getFiles(Specs.satisfyAll());
 
-                        LOGGER.lifecycle("Found " + files.size() + " files");
+                        LOGGER.info("Found " + files.size() + " files");
                         for (File file : files) {
-                            LOGGER.lifecycle("Pickup file: " + file.toString());
+                            LOGGER.info("Pickup file: " + file.toString());
                             if ("jar".equals(getFileExtension(file))) dependencies.add(file);
                         }
                     } catch (Exception e) {
-                        if (enableStacktrace) LOGGER.lifecycle("pizda", e);
+                        LOGGER.error(e.getMessage());
                     }
                 }
+                else LOGGER.info("Skipping configuration: " + configuration.getName() + " - cant resolve.");
             }
         }
 
@@ -115,7 +118,7 @@ public class GetDepATsTask extends DefaultTask {
                     cfgs.add(file);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
         return cfgs;
     }

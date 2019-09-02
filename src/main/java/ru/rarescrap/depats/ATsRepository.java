@@ -17,12 +17,12 @@ public class ATsRepository {
     public void add(File cfgFile, File dependency) throws IOException {
         Set<String> allATs = parseCfg(cfgFile); // Все трансформеры из файла
         if (allATs.isEmpty()) {
-            LOGGER.lifecycle("No ATs in " + cfgFile);
+            LOGGER.info("No ATs in " + cfgFile);
             return;
         }
 
-        LOGGER.lifecycle("Founded ATs: " + cfgFile);
-        for (String atPath : allATs) LOGGER.lifecycle("\t" + atPath);
+        LOGGER.info("Founded ATs: " + cfgFile);
+        for (String atPath : allATs) LOGGER.info("\t" + atPath);
 
         // Потому что не хочу тащить гуаву
         Set<String> actualATs = new HashSet<>(allATs); // Уникальные транформеры относительно других
@@ -99,7 +99,7 @@ public class ATsRepository {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         }
     }
 
