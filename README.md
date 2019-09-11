@@ -18,8 +18,7 @@
 ```gradle
 buildscript {
     repositories {
-        // ...
-        maven { url = "https://dl.bintray.com/rarescrap/minecraft" }
+        jcenter()
     }
     dependencies {
         classpath 'ru.rarescrap:depATs:1.0.0'
