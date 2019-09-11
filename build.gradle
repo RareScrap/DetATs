@@ -37,6 +37,7 @@ publishing {
     publications {
         BintrayPublication(MavenPublication) {
             from components.java // Артефакты по умолчанию. Отлючаем их, т.к. нам нужно артефакт main-модуля заменить на артефакт от api-модуля
+            artifact sourcesJar
             groupId group
             artifactId archivesBaseName
             version version
@@ -60,6 +61,11 @@ bintray {
             released  = new Date()
         }
     }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
 }
 
 // Устраняет ошибки компиляции из-за русских комментов
